@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0d1a">
+<title>Family HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0d1a;--panel:#1a1a2e;--card:#16213e;--card2:#0f3460;
+  --chi:#4ade80;--chi-d:#166534;--mom:#c084fc;--mom-d:#581c87;
+  --asher:#fb923c;--luca:#38bdf8;--gold:#fbbf24;
+  --text:#f1f5f9;--muted:#94a3b8;--border:#1e3a5f;
+  --pixel:2px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden}
+.px{font-family:'Press Start 2P',monospace}
+.scanlines{pointer-events:none;position:fixed;inset:0;z-index:9998;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px)}
+
+/* HEADER */
+.hdr{background:var(--panel);border-bottom:2px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between}
+.hdr-title{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--gold);letter-spacing:1px}
+.hdr-title span{color:var(--chi);font-size:9px;display:block;margin-top:4px}
+.players{display:flex;gap:6px}
+.player-btn{background:var(--card);border:2px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px;transition:border-color .15s;color:var(--text)}
+.player-btn.chi{border-color:var(--chi-d)}
+.player-btn.mom{border-color:var(--mom-d)}
+.player-btn.active-chi{background:var(--chi-d);border-color:var(--chi);color:#fff}
+.player-btn.active-mom{background:var(--mom-d);border-color:var(--mom);color:#fff}
+.player-btn.active-asher{background:#7c2d12;border-color:var(--asher);color:#fff}
+.player-btn.active-luca{background:#0c4a6e;border-color:var(--luca);color:#fff}
+
+/* NAV TABS */
+.tabs{display:flex;background:var(--panel);border-bottom:2px solid var(--border)}
+.tab{flex:1;padding:12px 4px;text-align:center;cursor:pointer;font-size:11px;color:var(--muted);border:none;background:none;border-bottom:3px solid transparent;transition:all .15s;font-family:'Press Start 2P',monospace;letter-spacing:-.5px}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tab-icon{font-size:16px;display:block;margin-bottom:4px}
+
+/* PANELS */
+.panel{display:none;padding:16px;max-width:700px;margin:0 auto}
+.panel.active{display:block}
+
+/* CARDS */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+.card-title{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--gold);margin-bottom:10px;letter-spacing:.5px}
+
+/* SCHEDULE */
+.now-banner{background:var(--card2);border:2px solid var(--chi);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center}
+.now-banner.mom-night{border-color:var(--mom)}
+.now-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);margin-bottom:6px}
+.now-who{font-family:'Press Start 2P',monospace;font-size:16px;color:var(--chi)}
+.now-who.mom{color:var(--mom)}
+.now-sub{font-size:12px;color:var(--muted);margin-top:6px}
+.week-label{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);margin:16px 0 8px;letter-spacing:.5px}
+.sched-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px}
+.day-hdr{text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:2px 0}
+.day-cell{border-radius:8px;padding:8px 4px;text-align:center;border:2px solid transparent;cursor:default}
+.day-cell .day-num{font-size:13px;font-weight:700;line-height:1}
+.day-cell .day-who{font-size:9px;margin-top:3px;font-weight:600}
+.day-cell.chi-day{background:#14532d;border-color:var(--chi-d)}
+.day-cell.chi-day .day-who{color:var(--chi)}
+.day-cell.mom-day{background:#3b0764;border-color:var(--mom-d)}
+.day-cell.mom-day .day-who{color:var(--mom)}
+.day-cell.today{border-color:var(--gold) !important;box-shadow:0 0 0 1px var(--gold)}
+.day-cell.today .day-num{color:var(--gold)}
+.legend{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.leg-dot{width:10px;height:10px;border-radius:3px}
+.sched-notes{background:var(--card);border-radius:10px;padding:12px;margin-top:12px}
+.sched-notes p{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:6px}
+.sched-notes p:last-child{margin-bottom:0}
+.sched-notes strong{color:var(--text)}
+
+/* BOARD */
+.board-add{width:100%;background:var(--chi-d);border:2px solid var(--chi);color:#fff;border-radius:10px;padding:12px;font-size:13px;cursor:pointer;font-weight:600;margin-bottom:16px;font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:.5px}
+.board-add:hover{background:#166534}
+.kanban-col{margin-bottom:16px}
+.col-hdr{font-family:'Press Start 2P',monospace;font-size:8px;padding:8px 12px;border-radius:8px 8px 0 0;letter-spacing:.5px}
+.col-hdr.quests{background:#1e3a5f;color:var(--luca)}
+.col-hdr.active{background:#451a03;color:var(--asher)}
+.col-hdr.done{background:#14532d;color:var(--chi)}
+.col-body{background:var(--panel);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;min-height:60px;padding:8px}
+.k-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;position:relative}
+.k-card:hover{border-color:var(--gold)}
+.k-card-title{font-size:13px;font-weight:600;margin-bottom:4px;padding-right:20px}
+.k-card-meta{font-size:11px;color:var(--muted)}
+.k-card-who{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;margin-right:6px}
+.k-card-who.chi{background:var(--chi-d);color:var(--chi)}
+.k-card-who.mom{background:var(--mom-d);color:var(--mom)}
+.k-card-who.asher{background:#7c2d12;color:var(--asher)}
+.k-card-who.luca{background:#0c4a6e;color:var(--luca)}
+.k-card-who.all{background:#1e3a5f;color:var(--gold)}
+.k-card-adv{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 5px;border-radius:4px}
+.k-card-adv:hover{background:var(--card2);color:var(--text)}
+.k-del{background:none;border:1px solid #7f1d1d;color:#f87171;font-size:10px;border-radius:4px;padding:2px 6px;cursor:pointer;margin-left:4px}
+.add-form{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;display:none}
+.add-form.open{display:block}
+.form-row{margin-bottom:10px}
+.form-row label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-family:'Press Start 2P',monospace;font-size:8px}
+.form-row input,.form-row select,.form-row textarea{width:100%;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;outline:none}
+.form-row textarea{resize:vertical;min-height:60px}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:var(--gold)}
+.form-row select option{background:var(--panel)}
+.btn-row{display:flex;gap:8px}
+.btn{padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:12px;font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:.3px}
+.btn-primary{background:var(--chi-d);border:2px solid var(--chi);color:#fff}
+.btn-primary:hover{background:#166534}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--text);color:var(--text)}
+.btn-danger{background:#7f1d1d;border:1px solid #b91c1c;color:#fca5a5}
+.btn-approve{background:#14532d;border:1px solid var(--chi);color:var(--chi)}
+.btn-decline{background:#7f1d1d;border:1px solid #ef4444;color:#fca5a5}
+
+/* REQUESTS */
+.req-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.req-from{font-family:'Press Start 2P',monospace;font-size:8px;margin-bottom:6px}
+.req-from.chi{color:var(--chi)}
+.req-from.mom{color:var(--mom)}
+.req-date{font-size:13px;font-weight:600;margin-bottom:4px}
+.req-reason{font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5}
+.req-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;display:inline-block}
+.req-status.pending{background:#451a03;color:var(--asher)}
+.req-status.approved{background:#14532d;color:var(--chi)}
+.req-status.declined{background:#7f1d1d;color:#fca5a5}
+.req-actions{display:flex;gap:8px;margin-top:8px}
+.empty{text-align:center;padding:28px;color:var(--muted);font-size:13px}
+.section-divider{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--muted);margin:16px 0 10px;letter-spacing:.5px;border-top:1px solid var(--border);padding-top:14px}
+
+/* NOTES */
+.note-post{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px}
+.note-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.note-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.note-author{font-family:'Press Start 2P',monospace;font-size:8px}
+.note-author.chi{color:var(--chi)}
+.note-author.mom{color:var(--mom)}
+.note-author.asher{color:var(--asher)}
+.note-author.luca{color:var(--luca)}
+.note-time{font-size:11px;color:var(--muted)}
+.note-text{font-size:13px;line-height:1.6;color:var(--text)}
+.reactions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.rxn-btn{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px;transition:border-color .1s}
+.rxn-btn:hover{border-color:var(--gold)}
+.rxn-btn .rxn-count{font-size:11px;color:var(--muted);font-weight:600}
+.rxn-btn.reacted{border-color:var(--gold);background:#451a03}
+
+/* LOADER */
+#loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity .4s}
+#loader.out{opacity:0;pointer-events:none}
+.loader-title{font-family:'Press Start 2P',monospace;font-size:18px;color:var(--gold);margin-bottom:16px;text-align:center;line-height:1.6}
+.loader-sub{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--muted);animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.pixel-bar{width:220px;height:16px;background:var(--panel);border:2px solid var(--border);border-radius:2px;margin-top:24px;overflow:hidden}
+.pixel-fill{height:100%;background:var(--chi);animation:load .8s ease-out forwards}
+@keyframes load{0%{width:0}100%{width:100%}}
+
+@media(max-width:480px){
+  .hdr-title{font-size:9px}
+  .player-btn{font-size:11px;padding:4px 7px}
+  .tab{font-size:9px;padding:10px 2px}
+}
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<div id="loader">
+  <div class="loader-title">FAMILY HQ<br><span style="font-size:10px;color:var(--chi)">Asher + Luca</span></div>
+  <div class="loader-sub">PRESS START...</div>
+  <div class="pixel-bar"><div class="pixel-fill"></div></div>
+</div>
+
+<div id="app" style="opacity:0;transition:opacity .4s">
+
+  <div class="hdr">
+    <div>
+      <div class="hdr-title px">FAMILY HQ
+        <span id="player-name">SELECT PLAYER</span>
+      </div>
+    </div>
+    <div class="players">
+      <button class="player-btn chi" onclick="setPlayer('chi')" title="Chi / Dad">&#127918;</button>
+      <button class="player-btn mom" onclick="setPlayer('mom')" title="Mellisa / Mom">&#127912;</button>
+      <button class="player-btn asher" onclick="setPlayer('asher')" title="Asher">&#9889;</button>
+      <button class="player-btn luca" onclick="setPlayer('luca')" title="Luca">&#127754;</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="schedule" onclick="switchTab('schedule')">
+      <span class="tab-icon">&#128197;</span>SCHED
+    </button>
+    <button class="tab" data-tab="board" onclick="switchTab('board')">
+      <span class="tab-icon">&#127183;</span>BOARD
+    </button>
+    <button class="tab" data-tab="requests" onclick="switchTab('requests')">
+      <span class="tab-icon">&#8646;</span>SWAP
+    </button>
+    <button class="tab" data-tab="notes" onclick="switchTab('notes')">
+      <span class="tab-icon">&#128172;</span>NOTES
+    </button>
+  </div>
+
+  <!-- SCHEDULE -->
+  <div id="panel-schedule" class="panel active">
+    <div id="now-banner" class="now-banner">
+      <div class="now-label px">TONIGHT</div>
+      <div id="now-who" class="now-who px">Loading...</div>
+      <div id="now-sub" class="now-sub"></div>
+    </div>
+
+    <div class="week-label px">THIS WEEK</div>
+    <div class="sched-grid" id="week-headers-1">
+      <div class="day-hdr">Sun</div><div class="day-hdr">Mon</div>
+      <div class="day-hdr">Tue</div><div class="day-hdr">Wed</div>
+      <div class="day-hdr">Thu</div><div class="day-hdr">Fri</div>
+      <div class="day-hdr">Sat</div>
+    </div>
+    <div class="sched-grid" id="week-grid-1"></div>
+
+    <div class="week-label px" style="margin-top:20px">NEXT WEEK</div>
+    <div class="sched-grid">
+      <div class="day-hdr">Sun</div><div class="day-hdr">Mon</div>
+      <div class="day-hdr">Tue</div><div class="day-hdr">Wed</div>
+      <div class="day-hdr">Thu</div><div class="day-hdr">Fri</div>
+      <div class="day-hdr">Sat</div>
+    </div>
+    <div class="sched-grid" id="week-grid-2"></div>
+
+    <div class="legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#14532d;border:1px solid var(--chi)"></div> Dad (Chi)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#3b0764;border:1px solid var(--mom)"></div> Mom (Mellisa)</div>
+      <div class="leg-item"><div class="leg-dot" style="border:2px solid var(--gold)"></div> Today</div>
+    </div>
+
+    <div class="sched-notes" style="margin-top:16px">
+      <div class="card-title px">SCHOOL INFO</div>
+      <p><strong>Asher</strong> &#8594; Shady Lane School, 8:15am start &#x1F6F4; scooter from Dad's OK</p>
+      <p><strong>Luca (now)</strong> &#8594; Shady Lane School, 8:15am start</p>
+      <p><strong>Luca (Sept+)</strong> &#8594; Deptford Middle School, 7:15am start &#x1F68C; bus only &#8212; no scooter on Delsea</p>
+      <p><strong>Thu evenings</strong> &#8594; Mom has class 5&#8211;9:30pm. Babysitter details TBD by Mom.</p>
+      <p><strong>Aunt Suzanne</strong> &#8594; West Deptford, on-call backup &#x2764;&#xFE0F;</p>
+    </div>
+  </div>
+
+  <!-- BOARD -->
+  <div id="panel-board" class="panel">
+    <button class="board-add px" onclick="toggleAddForm()">+ NEW QUEST</button>
+
+    <div class="add-form" id="add-form">
+      <div class="card-title px">NEW QUEST</div>
+      <div class="form-row">
+        <label class="px">Title</label>
+        <input type="text" id="k-title" placeholder="What needs doing?">
+      </div>
+      <div class="form-row">
+        <label class="px">Notes (optional)</label>
+        <textarea id="k-desc" placeholder="Details..."></textarea>
+      </div>
+      <div class="form-row">
+        <label class="px">Assign to</label>
+        <select id="k-who">
+          <option value="all">Everyone</option>
+          <option value="chi">Dad (Chi)</option>
+          <option value="mom">Mom (Mellisa)</option>
+          <option value="asher">Asher</option>
+          <option value="luca">Luca</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="addCard()">SAVE</button>
+        <button class="btn btn-ghost" onclick="toggleAddForm()">CANCEL</button>
+      </div>
+    </div>
+
+    <div class="kanban-col">
+      <div class="col-hdr quests px">&#128203; QUESTS</div>
+      <div class="col-body" id="col-quests"></div>
+    </div>
+    <div class="kanban-col">
+      <div class="col-hdr active px">&#9889; ACTIVE</div>
+      <div class="col-body" id="col-active"></div>
+    </div>
+    <div class="kanban-col">
+      <div class="col-hdr done px">&#10003; CLEARED</div>
+      <div class="col-body" id="col-done"></div>
+    </div>
+  </div>
+
+  <!-- REQUESTS -->
+  <div id="panel-requests" class="panel">
+    <div class="card">
+      <div class="card-title px">REQUEST A SWAP</div>
+      <div class="form-row">
+        <label class="px">Requesting as</label>
+        <select id="req-from">
+          <option value="chi">Dad (Chi)</option>
+          <option value="mom">Mom (Mellisa)</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="px">Date needed</label>
+        <input type="date" id="req-date">
+      </div>
+      <div class="form-row">
+        <label class="px">Reason (optional)</label>
+        <textarea id="req-reason" placeholder="Why the change?" style="min-height:50px"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitRequest()">SEND REQUEST</button>
+    </div>
+
+    <div class="section-divider px">&#8987; PENDING</div>
+    <div id="req-pending"></div>
+
+    <div class="section-divider px">&#128218; HISTORY</div>
+    <div id="req-history"></div>
+  </div>
+
+  <!-- NOTES -->
+  <div id="panel-notes" class="panel">
+    <div class="note-post">
+      <div class="card-title px">NEW MESSAGE</div>
+      <div class="form-row">
+        <label class="px">From</label>
+        <select id="note-author">
+          <option value="chi">&#127918; Dad (Chi)</option>
+          <option value="mom">&#127912; Mom (Mellisa)</option>
+          <option value="asher">&#9889; Asher</option>
+          <option value="luca">&#127754; Luca</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <textarea id="note-text" placeholder="Type something..." style="min-height:70px"></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="postNote()">SEND</button>
+    </div>
+    <div id="notes-feed"></div>
+  </div>
+
+</div>
+
+<script>
+const REF = new Date('2026-04-05T00:00:00');
+const OWNERS = ['chi','chi','chi','chi','mom','mom','mom','mom','chi','chi','chi','mom','mom','mom'];
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const EMOJIS = {chi:'&#127918;',mom:'&#127912;',asher:'&#9889;',luca:'&#127754;',all:'&#127775;'};
+const LABELS = {chi:'Dad (Chi)',mom:'Mom (Mellisa)',asher:'Asher',luca:'Luca',all:'Everyone'};
+const RXNS = ['&#128077;','&#10084;','&#128516;','&#11088;'];
+
+let currentPlayer = localStorage.getItem('fhq_player') || '';
+
+function getOwner(date) {
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const r = new Date(REF); r.setHours(0,0,0,0);
+  const diff = Math.round((d - r) / 86400000);
+  return OWNERS[((diff % 14) + 14) % 14];
+}
+
+function getWeekStart(offset) {
+  const t = new Date(); t.setHours(0,0,0,0);
+  const day = t.getDay();
+  const sun = new Date(t); sun.setDate(t.getDate() - day + offset * 7);
+  return sun;
+}
+
+function renderSchedule() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayOwner = getOwner(today);
+  const nb = document.getElementById('now-banner');
+  const nw = document.getElementById('now-who');
+  const ns = document.getElementById('now-sub');
+  nb.className = 'now-banner' + (todayOwner === 'mom' ? ' mom-night' : '');
+  nw.className = 'now-who px' + (todayOwner === 'mom' ? ' mom' : '');
+  nw.innerHTML = todayOwner === 'chi' ? '&#127918; DAD\'S TONIGHT' : '&#127912; MOM\'S TONIGHT';
+  ns.textContent = today.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  [0,1].forEach(offset => {
+    const grid = document.getElementById('week-grid-' + (offset+1));
+    if (!grid) return;
+    grid.innerHTML = '';
+    const sun = getWeekStart(offset);
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(sun); date.setDate(sun.getDate() + d);
+      const owner = getOwner(date);
+      const isToday = date.getTime() === today.getTime();
+      const cell = document.createElement('div');
+      cell.className = 'day-cell ' + owner + '-day' + (isToday ? ' today' : '');
+      cell.innerHTML = '<div class="day-num">' + date.getDate() + '</div>' +
+        '<div class="day-who">' + (owner === 'chi' ? 'DAD' : 'MOM') + '</div>';
+      grid.appendChild(cell);
+    }
+  });
+}
+
+function setPlayer(p) {
+  currentPlayer = p;
+  localStorage.setItem('fhq_player', p);
+  document.getElementById('player-name').textContent = LABELS[p];
+  document.querySelectorAll('.player-btn').forEach(b => {
+    b.className = 'player-btn ' + b.getAttribute('onclick').match(/'(\w+)'/)[1];
+  });
+  const btn = document.querySelector('.player-btn.' + p);
+  if (btn) btn.classList.add('active-' + p);
+  if (document.getElementById('req-from')) document.getElementById('req-from').value = (p === 'asher' || p === 'luca') ? 'chi' : p;
+  if (document.getElementById('note-author')) document.getElementById('note-author').value = p || 'chi';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  if (tab === 'board') renderBoard();
+  if (tab === 'requests') renderRequests();
+  if (tab === 'notes') renderNotes();
+}
+
+// DB layer (localStorage with Firebase upgrade path)
+const DB = {
+  get(k) { try { return JSON.parse(localStorage.getItem('fhq_' + k) || 'null'); } catch(e) { return null; } },
+  set(k, v) { localStorage.setItem('fhq_' + k, JSON.stringify(v)); try { new BroadcastChannel('fhq').postMessage({k, v}); } catch(e) {} },
+  push(k, item) {
+    const arr = this.get(k) || [];
+    const newItem = { ...item, id: Date.now().toString(36) + Math.random().toString(36).slice(2,5) };
+    arr.unshift(newItem);
+    this.set(k, arr);
+    return newItem;
+  }
+};
+
+try {
+  const bc = new BroadcastChannel('fhq');
+  bc.onmessage = () => { renderBoard(); renderRequests(); renderNotes(); };
+} catch(e) {}
+
+// BOARD
+function toggleAddForm() {
+  const f = document.getElementById('add-form');
+  f.classList.toggle('open');
+  if (f.classList.contains('open')) document.getElementById('k-title').focus();
+}
+
+function addCard() {
+  const title = document.getElementById('k-title').value.trim();
+  if (!title) return;
+  DB.push('board', {
+    title, desc: document.getElementById('k-desc').value.trim(),
+    who: document.getElementById('k-who').value, col: 'quests',
+    by: currentPlayer || 'chi'
+  });
+  document.getElementById('k-title').value = '';
+  document.getElementById('k-desc').value = '';
+  document.getElementById('add-form').classList.remove('open');
+  renderBoard();
+}
+
+function advanceCard(id) {
+  const cards = DB.get('board') || [];
+  const COLS = ['quests','active','done'];
+  const c = cards.find(x => x.id === id);
+  if (!c) return;
+  c.col = COLS[(COLS.indexOf(c.col) + 1) % 3];
+  DB.set('board', cards);
+  renderBoard();
+}
+
+function deleteCard(id) {
+  if (!confirm('Remove this quest?')) return;
+  DB.set('board', (DB.get('board') || []).filter(x => x.id !== id));
+  renderBoard();
+}
+
+function renderBoard() {
+  const cards = DB.get('board') || [];
+  ['quests','active','done'].forEach(col => {
+    const el = document.getElementById('col-' + col);
+    if (!el) return;
+    const cols = cards.filter(c => c.col === col);
+    if (!cols.length) { el.innerHTML = '<div class="empty">No items here yet</div>'; return; }
+    el.innerHTML = cols.map(c => `
+      <div class="k-card">
+        <div class="k-card-title">${esc(c.title)}</div>
+        ${c.desc ? '<div class="k-card-meta" style="margin-bottom:6px;line-height:1.5">' + esc(c.desc) + '</div>' : ''}
+        <div class="k-card-meta">
+          <span class="k-card-who ${c.who}">${LABELS[c.who] || c.who}</span>
+          <button class="k-del" onclick="deleteCard('${c.id}')">&#128465;</button>
+        </div>
+        <button class="k-card-adv" onclick="advanceCard('${c.id}')" title="Advance">&#9654;</button>
+      </div>`).join('');
+  });
+}
+
+// REQUESTS
+function submitRequest() {
+  const date = document.getElementById('req-date').value;
+  if (!date) { alert('Pick a date first!'); return; }
+  DB.push('requests', {
+    from: document.getElementById('req-from').value,
+    date, reason: document.getElementById('req-reason').value.trim(),
+    status: 'pending'
+  });
+  document.getElementById('req-date').value = '';
+  document.getElementById('req-reason').value = '';
+  renderRequests();
+}
+
+function respondRequest(id, status) {
+  const reqs = DB.get('requests') || [];
+  const r = reqs.find(x => x.id === id);
+  if (r) { r.status = status; DB.set('requests', reqs); }
+  renderRequests();
+}
+
+function renderRequests() {
+  const reqs = DB.get('requests') || [];
+  const pending = reqs.filter(r => r.status === 'pending');
+  const history = reqs.filter(r => r.status !== 'pending');
+
+  const pEl = document.getElementById('req-pending');
+  if (!pEl) return;
+  if (!pending.length) { pEl.innerHTML = '<div class="empty">No pending requests</div>'; }
+  else pEl.innerHTML = pending.map(r => `
+    <div class="req-item">
+      <div class="req-from ${r.from} px">${EMOJIS[r.from]} ${LABELS[r.from]}</div>
+      <div class="req-date">${fmtDate(r.date)}</div>
+      ${r.reason ? '<div class="req-reason">' + esc(r.reason) + '</div>' : '<div class="req-reason" style="font-style:italic">No reason given</div>'}
+      <div class="req-actions">
+        <button class="btn btn-approve" onclick="respondRequest('${r.id}','approved')">APPROVE &#10003;</button>
+        <button class="btn btn-decline" onclick="respondRequest('${r.id}','declined')">DECLINE &#10007;</button>
+      </div>
+    </div>`).join('');
+
+  const hEl = document.getElementById('req-history');
+  if (!history.length) { hEl.innerHTML = '<div class="empty">No past requests</div>'; }
+  else hEl.innerHTML = history.map(r => `
+    <div class="req-item">
+      <div class="req-from ${r.from} px">${EMOJIS[r.from]} ${LABELS[r.from]}</div>
+      <div class="req-date">${fmtDate(r.date)}</div>
+      ${r.reason ? '<div class="req-reason">' + esc(r.reason) + '</div>' : ''}
+      <span class="req-status ${r.status}">${r.status.toUpperCase()}</span>
+    </div>`).join('');
+}
+
+// NOTES
+function postNote() {
+  const text = document.getElementById('note-text').value.trim();
+  if (!text) return;
+  DB.push('notes', {
+    author: document.getElementById('note-author').value,
+    text, reactions: {}, ts: Date.now()
+  });
+  document.getElementById('note-text').value = '';
+  renderNotes();
+}
+
+function react(id, emoji) {
+  const notes = DB.get('notes') || [];
+  const n = notes.find(x => x.id === id);
+  if (!n) return;
+  if (!n.reactions) n.reactions = {};
+  const key = 'p_' + currentPlayer + '_' + emoji;
+  if (!n.reacted) n.reacted = {};
+  if (n.reacted[key]) { n.reactions[emoji] = Math.max(0, (n.reactions[emoji] || 1) - 1); delete n.reacted[key]; }
+  else { n.reactions[emoji] = (n.reactions[emoji] || 0) + 1; n.reacted[key] = true; }
+  DB.set('notes', notes);
+  renderNotes();
+}
+
+function renderNotes() {
+  const notes = DB.get('notes') || [];
+  const feed = document.getElementById('notes-feed');
+  if (!feed) return;
+  if (!notes.length) { feed.innerHTML = '<div class="empty">No messages yet. Say hi! &#128075;</div>'; return; }
+  feed.innerHTML = notes.map(n => {
+    const reacted = n.reacted || {};
+    const rxns = RXNS.map(r => {
+      const cnt = (n.reactions || {})[r] || 0;
+      const isReacted = reacted['p_' + currentPlayer + '_' + r];
+      return `<button class="rxn-btn${isReacted ? ' reacted' : ''}" onclick="react('${n.id}','${r}')">${r} <span class="rxn-count">${cnt > 0 ? cnt : ''}</span></button>`;
+    }).join('');
+    return `
+      <div class="note-item">
+        <div class="note-header">
+          <span class="note-author ${n.author} px">${EMOJIS[n.author] || ''} ${LABELS[n.author] || n.author}</span>
+          <span class="note-time">${timeAgo(n.ts)}</span>
+        </div>
+        <div class="note-text">${esc(n.text)}</div>
+        <div class="reactions">${rxns}</div>
+      </div>`;
+  }).join('');
+}
+
+function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>'); }
+function fmtDate(s) { const d = new Date(s + 'T12:00:00'); return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'}); }
+function timeAgo(ts) {
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago';
+  return Math.floor(s/86400) + 'd ago';
+}
+
+// PWA
+(function() {
+  const m = { name:'Family HQ', short_name:'FamilyHQ', start_url:'.', display:'standalone',
+    background_color:'#0d0d1a', theme_color:'#0d0d1a',
+    icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#127918;</text></svg>",sizes:'any',type:'image/svg+xml'}]};
+  const b = new Blob([JSON.stringify(m)],{type:'application/manifest+json'});
+  const l = document.createElement('link'); l.rel='manifest'; l.href=URL.createObjectURL(b);
+  document.head.appendChild(l);
+  if('serviceWorker' in navigator) {
+    const sw = `self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{const c=res.clone();caches.open('fhq-v1').then(ca=>ca.put(e.request,c));return res}))));self.addEventListener('install',e=>e.waitUntil(caches.open('fhq-v1')));`;
+    const blob = new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+  }
+})();
+
+// INIT
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loader').classList.add('out');
+    document.getElementById('app').style.opacity = '1';
+    renderSchedule();
+    renderBoard();
+    if (currentPlayer) setPlayer(currentPlayer);
+    else document.getElementById('player-name').textContent = 'SELECT PLAYER';
+    setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
+  }, 900);
+  setInterval(renderSchedule, 60000);
+});
+</script>
+</body>
+</html>
